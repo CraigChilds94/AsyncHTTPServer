@@ -52,12 +52,6 @@ public class AsyncHTTPServer {
         bindWorker();
     }
     
-    private int getMyBytesRead() {
-        synchronized(myBytesRead) {
-            return myBytesRead;
-        }
-    }
-    
     private void bindWorker() throws InterruptedException, ExecutionException {
         System.out.println("Binding worker");
         worker = acceptFuture.get();
