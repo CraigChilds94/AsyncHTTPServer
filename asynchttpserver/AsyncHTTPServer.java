@@ -34,12 +34,6 @@ public class AsyncHTTPServer {
     private ByteBuffer buffer;
     private CompletionHandler handler;
     
-    // Used to keep track of reading
-    private static final int BYTES_READ_INIT_VALUE = Integer.MIN_VALUE;
-    private static final int BYTES_READ_COMPLETED_VALUE = -1;
-    private static final int BYTES_READ_FAILED_VALUE = -2;
-    private Integer myBytesRead = BYTES_READ_INIT_VALUE;
-    
     /**
      * Run an Async HTTP server on specified
      * address and port
