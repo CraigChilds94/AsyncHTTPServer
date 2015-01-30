@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package asynchttpserver;
 
 import java.io.IOException;
@@ -26,11 +21,11 @@ import java.util.concurrent.TimeUnit;
  */
 public class AsyncHTTPServer {
     
-    private AsynchronousServerSocketChannel server;
-    private SocketAddress addr;
-    private Future<AsynchronousSocketChannel> acceptFuture;
+    private final AsynchronousServerSocketChannel server;
+    private final SocketAddress addr;
+    private final Future<AsynchronousSocketChannel> acceptFuture;
+    private final AsynchronousChannelGroup group;
     private AsynchronousSocketChannel worker;
-    private AsynchronousChannelGroup group;
     private ByteBuffer buffer;
     private CompletionHandler handler;
     
@@ -43,21 +38,21 @@ public class AsyncHTTPServer {
      * @throws IOException
      * @throws InterruptedException
      * @throws ExecutionException 
+     * @throws java.lang.ClassNotFoundException 
      */
-    public AsyncHTTPServer(String address, int port) throws IOException, InterruptedException, ExecutionException {
+    public AsyncHTTPServer(String address, int port) throws IOException, InterruptedException, ExecutionException, ClassNotFoundException {
         addr = new InetSocketAddress(address, port);
         group = AsynchronousChannelGroup.withThreadPool(Executors.newSingleThreadExecutor());
         server = AsynchronousServerSocketChannel.open(group).bind(addr);
         acceptFuture = server.accept();
-        bindWorker();
+        listen();
     }
     
-    private void bindWorker() throws InterruptedException, ExecutionException {
-        System.out.println("Binding worker");
+    private void listen() throws InterruptedException, ExecutionException, IOException, ClassNotFoundException {
         worker = acceptFuture.get();
         buffer = ByteBuffer.allocate(2048); // Assign 2KB
-        handler = new HTTPReader();
-        worker.read(buffer, buffer, handler);
+        handler = new HTTPReader(worker, buffer);
+        worker.read(buffer, handler, handler);
         group.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
     }
 
@@ -66,8 +61,9 @@ public class AsyncHTTPServer {
      * @throws java.io.IOException
      * @throws java.lang.InterruptedException
      * @throws java.util.concurrent.ExecutionException
+     * @throws java.lang.ClassNotFoundException
      */
-    public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
+    public static void main(String[] args) throws IOException, InterruptedException, ExecutionException, ClassNotFoundException {
         AsyncHTTPServer a = new AsyncHTTPServer("127.0.0.1", 1337);
     }
     
