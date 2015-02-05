@@ -3,6 +3,7 @@ package asynchttpserver;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousChannelGroup;
 import java.nio.channels.AsynchronousServerSocketChannel;
@@ -21,11 +22,11 @@ import java.util.concurrent.TimeUnit;
  */
 public class AsyncHTTPServer {
     
-    private final AsynchronousServerSocketChannel server;
-    private final SocketAddress addr;
-    private final Future<AsynchronousSocketChannel> acceptFuture;
-    private final AsynchronousChannelGroup group;
-    private AsynchronousSocketChannel worker;
+    private AsynchronousServerSocketChannel server;
+    private SocketAddress addr;
+    private Future<AsynchronousSocketChannel> acceptFuture;
+    private AsynchronousChannelGroup group;
+    private AsynchronousSocketChannel client;
     private ByteBuffer buffer;
     private CompletionHandler handler;
     
@@ -44,16 +45,20 @@ public class AsyncHTTPServer {
         addr = new InetSocketAddress(address, port);
         group = AsynchronousChannelGroup.withThreadPool(Executors.newSingleThreadExecutor());
         server = AsynchronousServerSocketChannel.open(group).bind(addr);
+        server.setOption(StandardSocketOptions.SO_REUSEADDR, true);
         acceptFuture = server.accept();
         listen();
     }
     
     private void listen() throws InterruptedException, ExecutionException, IOException, ClassNotFoundException {
-        worker = acceptFuture.get();
-        buffer = ByteBuffer.allocate(2048); // Assign 2KB
-        handler = new HTTPReader(worker, buffer);
-        worker.read(buffer, handler, handler);
-        group.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
+        client = acceptFuture.get();
+        buffer = ByteBuffer.allocate(4096); // Assign 2KB
+        handler = new ReadCompletion(client, buffer);
+        client.read(buffer, handler, handler);
+        System.out.println("\nREQUEST\n");
+        System.out.println(new String(buffer.array()).trim());
+        System.out.println("\nRESPONSE\n");
+//        group.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
     }
 
     /**
@@ -64,7 +69,7 @@ public class AsyncHTTPServer {
      * @throws java.lang.ClassNotFoundException
      */
     public static void main(String[] args) throws IOException, InterruptedException, ExecutionException, ClassNotFoundException {
-        AsyncHTTPServer a = new AsyncHTTPServer("127.0.0.1", 1337);
+        AsyncHTTPServer a = new AsyncHTTPServer("localhost", 1337);
     }
     
 }
